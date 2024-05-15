@@ -1,0 +1,101 @@
+TIC-TAC-TOE AI
+
+Implement an AI agent that plays the classic game of Tic-Tac-Toe
+against a human player. You can use algorithms like Minimax with
+or without Alpha-Beta Pruning to make the AI player unbeatable.
+This project will help you understand game theory and basic search
+
+algorithms.
+class Board:
+  """Represents the Tic-Tac-Toe board."""
+  EMPTY = ' '
+  X = 'X'
+  O = 'O'
+
+  def __init__(self):
+    self.cells = [self.EMPTY] * 9
+
+  def display(self):
+    """Displays the current state of the board."""
+    for i in range(3):
+      for j in range(3):
+        print(self.cells[i * 3 + j], end=" ")
+      print()
+
+  def is_empty(self, pos):
+    """Checks if a position on the board is empty."""
+    return self.cells[pos] == self.EMPTY
+
+  def make_move(self, player, pos):
+    """Places a player's mark on a specific position."""
+    self.cells[pos] = player
+
+  def is_full(self):
+    """Checks if the board is full (no empty cells)."""
+    return all(cell != self.EMPTY for cell in self.cells)
+
+  def has_winner(self):
+    """Checks if there's a winner (3 consecutive marks)."""
+    winning_conditions = ((0, 1, 2), (3, 4, 5), (6, 7, 8),
+                          (0, 3, 6), (1, 4, 7), (2, 5, 8),
+                          (0, 4, 8), (2, 4, 6))
+    for condition in winning_conditions:
+      if all(self.cells[pos] == self.X for pos in condition):
+        return self.X
+      elif all(self.cells[pos] == self.O for pos in condition):
+        return self.O
+    return None
+
+def evaluate(board, player):
+  """Evaluates the board state for a given player (higher score for better position)."""
+  # Assign scores for winning, losing, or tie
+  if board.has_winner() == player:
+    return 10
+  elif board.has_winner() == Board.O:
+    return -10
+  else:
+    return 0
+
+def minimax(board, depth, player, alpha, beta):
+  """Minimax algorithm with Alpha-Beta Pruning to find the best move."""
+  if depth == 0 or board.is_full() or board.has_winner():
+    return evaluate(board, player)
+
+  if player == Board.X:
+    best_score = -float('inf')
+    for i in range(9):
+      if board.is_empty(i):
+        board.make_move(player, i)
+        score = minimax(board, depth - 1, Board.O, alpha, beta)
+        board.make_move(Board.EMPTY, i)  # Undo the move
+        best_score = max(best_score, score)
+        alpha = max(alpha, best_score)
+        if alpha >= beta:
+          break  # Prune branch if alpha exceeds beta
+    return best_score
+  else:
+    best_score = float('inf')
+    for i in range(9):
+      if board.is_empty(i):
+        board.make_move(player, i)
+        score = minimax(board, depth - 1, Board.X, alpha, beta)
+        board.make_move(Board.EMPTY, i)  # Undo the move
+        best_score = min(best_score, score)
+        beta = min(beta, best_score)
+        if alpha >= beta:
+          break  # Prune branch if alpha exceeds beta
+    return best_score
+
+def get_best_move(board, player):
+  """Finds the best move for the AI player using Minimax with Alpha-Beta Pruning."""
+  best_score = -float('inf')
+  best_move = None
+  for i in range(9):
+    if board.is_empty(i):
+      board.make_move(player, i)
+      score = minimax(board.copy(), 2, Board.O, -float('inf'), float('inf'))  # Set depth and initial alpha-beta values
+      board.make_move(Board.EMPTY, i)  # Undo the move
+      if score > best_score:
+        best_score = score
+        best_move = i
+  
