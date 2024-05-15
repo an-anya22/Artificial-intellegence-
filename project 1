@@ -1,0 +1,37 @@
+Build a simple chatbot that responds to user inputs based on
+predefined rules. Use if-else statements or pattern matching
+techniques to identify user queries and provide appropriate
+responses. This will give you a basic understanding of natural
+
+language processing and conversation flow.
+def greet(name):
+  """Greets the user by name."""
+  return f"Hi {name}, how can I help you today?"
+
+def answer_question(question):
+  """Provides a response to the user's question based on predefined rules."""
+  if "weather" in question:
+    return "I can't provide weather information yet, but I'm still learning!"
+  elif "time" in question:
+    from datetime import datetime
+    now = datetime.now().strftime("%H:%M:%S")
+    return f"The current time is {now}."
+  elif "your name" in question:
+    return "I'm Bard, a large language model from Google AI."
+  else:
+    return "I don't understand, but I'm always learning. Can you rephrase your question?"
+
+def main():
+  """Maintains the conversation flow with the user."""
+  name = input("What's your name? ")
+  print(greet(name))
+
+  while True:
+    user_input = input("> ").lower()
+    if user_input == "bye":
+      break
+    else:
+      print(answer_question(user_input))
+
+if __name__ == "__main__":
+  main()
