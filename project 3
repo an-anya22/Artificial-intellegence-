@@ -1,0 +1,82 @@
+Combine computer vision and natural language processing to build
+an image captioning AI. Use pre-trained image recognition models
+like VGG or ResNet to extract features from images, and then use a
+recurrent neural network (RNN) or transformer-based model to
+
+generate captions for those images.
+import tensorflow as tf
+from tensorflow.keras.applications import VGG16
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+from tensorflow.keras.preprocessing.text import Tokenizer
+from tensorflow.keras.layers import Dense, LSTM, Embedding, RepeatVector, Attention
+from tensorflow.keras.models import Model
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Sample image and caption loading (replace with your data source)
+image_paths = ["path/to/image1.jpg", "path/to/image2.jpg", ...]
+captions = ["A cat playing with a ball of yarn.", "A dog running through a field of flowers."]
+
+# Tokenize captions (create vocabulary)
+tokenizer = Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{|}~', lower=True)
+tokenizer.fit_on_texts(captions)
+vocab_size = len(tokenizer.word_index) + 1  # +1 for padding
+
+# Preprocess captions (integer sequences with padding)
+max_caption_len = 30  # Adjust this based on your dataset
+caption_sequences = tokenizer.texts_to_sequences(captions)
+caption_sequences = pad_sequences(caption_sequences, maxlen=max_caption_len, padding='post')
+
+# Load pre-trained VGG16 model (fine-tuning optional)
+def feature_extraction(image_path):
+  img = tf.keras.preprocessing.image.load_img(image_path, target_size=(224, 224))
+  img = tf.keras.preprocessing.image.img_to_array(img)
+  img = img / 255.0  # Normalize pixel values
+  img = np.expand_dims(img, axis=0)  # Add batch dimension
+  features = VGG16(weights='imagenet', include_top=False, input_shape=(224, 224, 3))(img)
+  return features.reshape(-1)  # Flatten feature vector
+
+# Extract features for all images
+features = np.array([feature_extraction(path) for path in image_paths])
+
+# Define the caption generation model
+embedding_dim = 128  # Adjust this based on your dataset and computational resources
+lstm_units = 256  # Adjust this based on your dataset and computational resources
+
+# Embedding layer
+embedding_layer = Embedding(vocab_size, embedding_dim, input_length=max_caption_len)
+
+# LSTM layer
+lstm = LSTM(lstm_units, return_sequences=True)  # Return entire sequence for attention
+
+# Attention layer (Bahdanau attention)
+def attention_layer(encoder_outputs, decoder_hidden):
+  score = tf.keras.backend.dot(decoder_hidden, tf.keras.backend.transpose(encoder_outputs, axes=(1, 2)))
+  attention_weights = tf.keras.backend.softmax(score, axis=1)
+  context_vector = tf.keras.backend.dot(attention_weights, encoder_outputs)
+  return context_vector, attention_weights
+
+# Decoder model
+decoder_hidden = RepeatVector(1)(features)  # Repeat features for each decoder step
+decoder_dense = Dense(vocab_size, activation='softmax')
+
+time_distributed_layer = tf.keras.layers.TimeDistributed(attention_layer)
+attention_model = tf.keras.Model(inputs=[features, decoder_hidden], outputs=time_distributed_layer([features, decoder_hidden]))
+
+decoder_inputs = tf.expand_dims(caption_sequences[:, :-1], 1)  # All captions except the last word
+
+decoder_lstm = LSTM(lstm_units, return_sequences=True)
+decoder_outputs = decoder_lstm(decoder_inputs, initial_state=decoder_hidden)
+
+decoder_attn_features, attention_weights = attention_model([features, decoder_outputs])
+decoder_concat_layer = tf.keras.layers.concatenate([decoder_outputs, decoder_attn_features], axis=-1)
+
+decoder_outputs = decoder_dense(decoder_concat_layer)
+
+# Model definition
+model = Model(inputs=features, outputs=decoder_outputs)
+
+# Loss function and optimizer (adjust learning rate as needed)
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+# Train the model (adjust epochs and batch size
